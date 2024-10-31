@@ -5,6 +5,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.google.calendar.GoogleCalendarComponent;
 import org.apache.camel.component.google.calendar.GoogleCalendarConfiguration;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.main.Main;
+import org.apache.camel.dsl.yaml.YamlRoutesBuilderLoader;
 
 import com.google.api.client.util.DateTime;
 import com.google.api.services.calendar.model.Event;
@@ -119,6 +121,40 @@ public class InsertEvent extends AbstractTask implements RunnableTask<InsertEven
     public InsertEvent.Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
         
+        CamelContext camelContext = new DefaultCamelContext();
+        camelContext.addComponent("google-calendar", this.calendarComponent(runContext)); // Configure Google Calendar component
+
+
+        Main main = new Main();
+
+        // Configure Google Calendar component with dynamic connection details
+        //CamelContext camelContext = new DefaultCamelContext();
+
+        // Add the Google Calendar component to the Camel context
+        //camelContext.addComponent("google-calendar", this.calendarComponent(runContext));
+        main.camelContexts.add(camelContext);
+        // Add the YAML route configuration file
+        main.addInitialProperty("camel.main.routes-include-pattern", "routes/google_calendar_insert_route.yaml");
+
+        Event event = new Event()
+            .setSummary(summary)
+            .setLocation(location)
+            .setDescription(description)
+            .setCreator(creator)
+            .setStart(new EventDateTime().setDateTime(new DateTime(startDateTime)).setTimeZone(startTimeZone))
+            .setEnd(new EventDateTime().setDateTime(new DateTime(endDateTime)).setTimeZone(endTimeZone));
+
+        // Send the event creation request
+        final Map<String, Object> headers = new HashMap<>();
+        // parameter type is String
+        headers.put("CamelGoogleCalendar.calendarId", calendarId);
+        // parameter type is com.google.api.services.calendar.model.Event
+        headers.put("CamelGoogleCalendar.content", event);
+        main.run();
+        // Start the Camel application
+        String response = (String)main.getCamelContext().createProducerTemplate().requestBodyAndHeaders("direct:createEvent", null, headers);
+
+        /*
          // Initialize Camel Context
         CamelContext camelContext = new DefaultCamelContext();
 
@@ -163,7 +199,9 @@ public class InsertEvent extends AbstractTask implements RunnableTask<InsertEven
         System.out.println("Response: " + response);
         // Stop the Camel context
         camelContext.stop();
-        return Output.builder().eventId(response).build();
+        */
+        return Output.builder().eventId(null).build();
+        
     }
 
     /**
