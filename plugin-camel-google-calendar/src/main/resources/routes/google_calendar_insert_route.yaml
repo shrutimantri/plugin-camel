@@ -1,0 +1,8 @@
+- route:
+    id: "google-calendar-insert-route"
+    description: "Route to insert an event into Google Calendar using dynamic configuration"
+    from:
+      uri: "direct:createEvent"
+      steps:
+        - to: "google-calendar://events/insert"
+        - log: "Event created with ID: ${body.id}"
